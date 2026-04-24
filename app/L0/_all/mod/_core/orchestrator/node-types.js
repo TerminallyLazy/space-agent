@@ -94,13 +94,16 @@ export function createDefaultNode(options = {}) {
     x: options.x,
     y: options.y,
     status: options.status || "idle",
-    config: { ...DEFAULT_CONFIG_BY_TYPE[type], ...(options.config || {}) },
-    runtime: { ...DEFAULT_RUNTIME_BY_TYPE[type], ...(options.runtime || {}) }
+    config: mergeNodeDefaults(DEFAULT_CONFIG_BY_TYPE[type], options.config),
+    runtime: mergeNodeDefaults(DEFAULT_RUNTIME_BY_TYPE[type], options.runtime)
   });
 }
 
 export function normalizeNode(source = {}) {
   const type = normalizeNodeType(source.type);
+  const sourceConfig = source.config && typeof source.config === "object" ? source.config : {};
+  const sourceRuntime = source.runtime && typeof source.runtime === "object" ? source.runtime : {};
+
   return {
     schema: ORCHESTRATOR_NODE_SCHEMA,
     id: normalizeInlineText(source.id, createNodeId()),
@@ -109,8 +112,8 @@ export function normalizeNode(source = {}) {
     x: normalizeCoordinate(source.x),
     y: normalizeCoordinate(source.y),
     status: normalizeInlineText(source.status, "idle"),
-    config: { ...DEFAULT_CONFIG_BY_TYPE[type], ...(source.config && typeof source.config === "object" ? source.config : {}) },
-    runtime: { ...DEFAULT_RUNTIME_BY_TYPE[type], ...(source.runtime && typeof source.runtime === "object" ? source.runtime : {}) }
+    config: mergeNodeDefaults(DEFAULT_CONFIG_BY_TYPE[type], sourceConfig),
+    runtime: mergeNodeDefaults(DEFAULT_RUNTIME_BY_TYPE[type], sourceRuntime)
   };
 }
 
@@ -128,4 +131,23 @@ function defaultNameForType(type) {
 function normalizeCoordinate(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
+}
+
+function mergeNodeDefaults(defaults, overrides) {
+  return {
+    ...clonePlainValue(defaults),
+    ...clonePlainValue(overrides && typeof overrides === "object" ? overrides : {})
+  };
+}
+
+function clonePlainValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => clonePlainValue(item));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, clonePlainValue(item)])
+    );
+  }
+  return value;
 }

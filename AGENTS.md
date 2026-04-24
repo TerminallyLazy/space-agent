@@ -95,6 +95,7 @@ App docs:
 - `/app/L0/_all/mod/_core/onscreen_agent/prompts/AGENTS.md`
 - `/app/L0/_all/mod/_core/onscreen_menu/AGENTS.md`
 - `/app/L0/_all/mod/_core/open_router/AGENTS.md`
+- `/app/L0/_all/mod/_core/orchestrator/AGENTS.md`
 - `/app/L0/_all/mod/_core/panels/AGENTS.md`
 - `/app/L0/_all/mod/_core/promptinclude/AGENTS.md`
 - `/app/L0/_all/mod/_core/router/AGENTS.md`

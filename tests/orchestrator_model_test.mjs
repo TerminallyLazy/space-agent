@@ -36,6 +36,24 @@ test("createDefaultNode creates typed defaults", () => {
   assert.equal(openai.runtime.mode, "server_sdk");
 });
 
+test("node defaults do not share nested mutable references", () => {
+  const docker = createDefaultNode({ type: "docker_container" });
+  docker.config.ports.push({ host: 8080, container: 80 });
+  docker.runtime.credentialRef = "docker-main";
+
+  const nextDocker = createDefaultNode({ type: "docker_container" });
+  assert.deepEqual(nextDocker.config.ports, []);
+  assert.equal(nextDocker.runtime.credentialRef, "");
+
+  const openai = normalizeNode({ type: "openai_agent" });
+  openai.config.sandbox.enabled = true;
+  openai.config.tools.push({ name: "search" });
+
+  const nextOpenai = normalizeNode({ type: "openai_agent" });
+  assert.deepEqual(nextOpenai.config.sandbox, { enabled: false });
+  assert.deepEqual(nextOpenai.config.tools, []);
+});
+
 test("normalizeNode clamps coordinates and preserves credential refs", () => {
   const node = normalizeNode({
     schema: "wrong",
