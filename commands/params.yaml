@@ -78,6 +78,12 @@ GIT_URL:
   allowed: ["*"]
   default: ""
   frontend_exposed: false
+DOCKER_HOST:
+  description: Docker socket path or TCP host for Docker API access.
+  type: text
+  allowed: ["*"]
+  default: ""
+  frontend_exposed: false
 USER_FOLDER_SIZE_LIMIT_BYTES:
   description: Maximum on-disk size in bytes for each L2 user folder. Set to 0 to disable the limit.
   type: number

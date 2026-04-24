@@ -104,6 +104,7 @@ Runtime resolution rules:
 - `CLOUD_SHARE_URL` tells browser clients which hosted share receiver to use and which base URL should be returned in generated share links; it defaults to `share.space-agent.ai` and is frontend-exposed
 - `CUSTOMWARE_GIT_HISTORY` enables optional adaptive-debounced per-owner local Git history repositories for writable `L1` and `L2` roots; it defaults to `true`
 - `GIT_BACKEND` defaults to `auto` and selects the backend used by server-owned Git flows such as local history and Git-backed module installs; `auto` keeps the default `native -> isomorphic` fallback order
+- `DOCKER_HOST` stores the backend-only Docker API socket path or TCP host for orchestrator-owned Docker access; it defaults to the empty string and must not be frontend-exposed
 - `USER_FOLDER_SIZE_LIMIT_BYTES` sets an optional byte cap for each on-disk `L2/<user>/` folder; `0` disables the cap
 - short-lived `user` and `group` commands flush pending local-history commits before returning when `CUSTOMWARE_GIT_HISTORY` is enabled
 

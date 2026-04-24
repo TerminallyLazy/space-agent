@@ -93,8 +93,12 @@
     "purpose": "Thin mobile-compatible server bridge for fetch proxying and local infrastructure."
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.119",
+    "@openai/agents": "^0.8.5",
     "archiver": "^7.0.1",
+    "dockerode": "^5.0.0",
     "electron-updater": "^6.8.3",
-    "isomorphic-git": "^1.37.4"
+    "isomorphic-git": "^1.37.4",
+    "zod": "^4.3.6"
   }
 }

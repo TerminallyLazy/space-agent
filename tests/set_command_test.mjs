@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { __test as setCommandTest } from "../commands/set.js";
 import { resolveRequestedGitBackend } from "../server/lib/git/shared.js";
 import { createRuntimeParams, loadParamSpecs, validateConfigValue } from "../server/lib/utils/runtime_params.js";
+
+const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 test("set parses one or more KEY=VALUE assignments", () => {
   assert.deepEqual(setCommandTest.parseSetArgs(["HOST=127.0.0.1"]), [
@@ -31,7 +35,7 @@ test("set rejects non assignment arguments", () => {
 });
 
 test("runtime params schema exposes GIT_BACKEND with auto default", async () => {
-  const specs = await loadParamSpecs("/workspace/agent-one");
+  const specs = await loadParamSpecs(PROJECT_ROOT);
   const spec = specs.find((entry) => entry.name === "GIT_BACKEND");
 
   assert.ok(spec);
@@ -42,10 +46,17 @@ test("runtime params schema exposes GIT_BACKEND with auto default", async () => 
   assert.throws(() => {
     validateConfigValue(spec, "unsupported");
   }, /GIT_BACKEND must match one of/);
+
+  const dockerHostSpec = specs.find((entry) => entry.name === "DOCKER_HOST");
+  assert.ok(dockerHostSpec);
+  assert.equal(dockerHostSpec.defaultValue, "");
+  assert.equal(dockerHostSpec.frontendExposed, false);
+  assert.equal(validateConfigValue(dockerHostSpec, "unix:///var/run/docker.sock"), "unix:///var/run/docker.sock");
+  assert.equal(validateConfigValue(dockerHostSpec, ""), "");
 });
 
 test("runtime params and env resolve requested git backend", async () => {
-  const runtimeParams = await createRuntimeParams("/workspace/agent-one", {
+  const runtimeParams = await createRuntimeParams(PROJECT_ROOT, {
     env: {},
     overrides: {
       GIT_BACKEND: "native"
@@ -56,7 +67,7 @@ test("runtime params and env resolve requested git backend", async () => {
   assert.equal(resolveRequestedGitBackend({ runtimeParams }), "native");
   assert.equal(resolveRequestedGitBackend({ backendName: undefined, runtimeParams }), "native");
 
-  const autoRuntimeParams = await createRuntimeParams("/workspace/agent-one", {
+  const autoRuntimeParams = await createRuntimeParams(PROJECT_ROOT, {
     env: {},
     overrides: {},
     storedValues: {}
