@@ -6,10 +6,21 @@ import {
   ORCHESTRATOR_NODE_SCHEMA
 } from "../app/L0/_all/mod/_core/orchestrator/constants.js";
 import {
+  canvasToWorld,
+  clampZoom,
+  createCamera,
+  createZoomedCamera,
+  worldToCanvas
+} from "../app/L0/_all/mod/_core/orchestrator/canvas.js";
+import {
   deriveEdgeType,
   normalizeEdge,
   resolveEdgeColor
 } from "../app/L0/_all/mod/_core/orchestrator/edges.js";
+import {
+  createMessageBus,
+  normalizeBusMessage
+} from "../app/L0/_all/mod/_core/orchestrator/message-bus.js";
 import {
   createDefaultNode,
   getNodeCategory,
@@ -141,4 +152,52 @@ test("edge colors are stable semantic values", () => {
   assert.equal(resolveEdgeColor("control"), "rgba(255, 180, 50, 0.78)");
   assert.equal(resolveEdgeColor("monitor"), "rgba(50, 200, 100, 0.74)");
   assert.equal(resolveEdgeColor("delegate"), "rgba(160, 100, 255, 0.76)");
+});
+
+test("canvas camera converts coordinates and zooms toward pointer", () => {
+  const camera = createCamera({ x: 10, y: 20, zoom: 2 });
+  assert.deepEqual(canvasToWorld(camera, 30, 60), { x: 10, y: 20 });
+  assert.deepEqual(worldToCanvas(camera, 10, 20), { x: 30, y: 60 });
+  assert.equal(clampZoom(10), 3);
+  assert.equal(clampZoom(0.01), 0.1);
+
+  const zoomed = createZoomedCamera({
+    camera: { x: 0, y: 0, zoom: 1 },
+    nextZoom: 2,
+    pointerX: 100,
+    pointerY: 100
+  });
+  assert.deepEqual(zoomed, { x: -100, y: -100, zoom: 2 });
+});
+
+test("message bus routes only across allowed graph edges", () => {
+  const bus = createMessageBus({
+    graphId: "graph-1",
+    edges: [{ source: "node-a", target: "node-b", protocol: "internal" }]
+  });
+
+  const delivered = [];
+  bus.subscribe((message) => delivered.push(message));
+  bus.send({ source: "node-a", target: "node-b", type: "task", payload: { input: "hello" } });
+
+  assert.equal(delivered.length, 1);
+  assert.equal(delivered[0].graphId, "graph-1");
+  assert.equal(delivered[0].type, "task");
+
+  assert.throws(() => {
+    bus.send({ source: "node-b", target: "node-a", type: "task", payload: {} });
+  }, /No edge allows/u);
+});
+
+test("normalizeBusMessage uses stable defaults", () => {
+  const message = normalizeBusMessage({
+    graphId: "graph-1",
+    source: "node-a",
+    target: "node-b",
+    payload: { ok: true }
+  });
+
+  assert.match(message.id, /^msg-/u);
+  assert.equal(message.type, "task");
+  assert.equal(message.protocol, "internal");
 });
