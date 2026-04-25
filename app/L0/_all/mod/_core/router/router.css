@@ -43,7 +43,8 @@ body.app-page-router > div[x-data] {
   overscroll-behavior: auto;
 }
 
-.router-stage[data-route-path="spaces"] {
+.router-stage[data-route-path="spaces"],
+.router-stage[data-route-path="orchestrator"] {
   height: 100%;
   min-height: 100%;
   overflow: hidden;
@@ -59,7 +60,8 @@ body.app-page-router > div[x-data] {
   padding: var(--router-shell-start-clearance) 0 0;
 }
 
-.router-stage-inner[data-route-path="spaces"] {
+.router-stage-inner[data-route-path="spaces"],
+.router-stage-inner[data-route-path="orchestrator"] {
   width: 100%;
   max-width: none;
   height: 100%;
@@ -70,7 +72,10 @@ body.app-page-router > div[x-data] {
 
 .router-stage-inner[data-route-path="spaces"] > .router-route-frame,
 .router-stage-inner[data-route-path="spaces"] > .router-route-frame > .router-route-outlet,
-.router-stage-inner[data-route-path="spaces"] > .router-route-frame > .router-route-outlet > .router-route-mount {
+.router-stage-inner[data-route-path="spaces"] > .router-route-frame > .router-route-outlet > .router-route-mount,
+.router-stage-inner[data-route-path="orchestrator"] > .router-route-frame,
+.router-stage-inner[data-route-path="orchestrator"] > .router-route-frame > .router-route-outlet,
+.router-stage-inner[data-route-path="orchestrator"] > .router-route-frame > .router-route-outlet > .router-route-mount {
   height: 100%;
   min-height: 100%;
 }

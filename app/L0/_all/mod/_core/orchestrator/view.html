@@ -1,0 +1,70 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="/mod/_core/orchestrator/orchestrator.css" />
+    <script type="module" src="/mod/_core/orchestrator/store.js"></script>
+  </head>
+  <body>
+    <div x-data class="orchestrator-root">
+      <x-context :data-tags="$store.orchestratorPage?.currentGraphContextTags || ''"></x-context>
+
+      <template x-inject='[id="_core/onscreen_menu/bar_start"]'>
+        <div class="orchestrator-topbar-cluster" data-order="110">
+          <button type="button" class="space-topbar-button space-topbar-button--icon" title="Back" aria-label="Back" @click="space.router?.back?.()">
+            <x-icon>chevron_left</x-icon>
+          </button>
+          <span class="orchestrator-topbar-title" x-text="$store.orchestratorPage?.graph?.title || 'Orchestrator'"></span>
+        </div>
+      </template>
+
+      <section class="orchestrator-shell" x-show="$store.orchestratorPage" x-cloak>
+        <header class="orchestrator-toolbar">
+          <button type="button" class="secondary-button" @click="void $store.orchestratorPage.addNode({ type: 'docker_container', x: 80, y: 80 })">
+            <x-icon>deployed_code</x-icon>
+            <span>Container</span>
+          </button>
+          <button type="button" class="secondary-button" @click="void $store.orchestratorPage.addNode({ type: 'openai_agent', x: 360, y: 120 })">
+            <x-icon>smart_toy</x-icon>
+            <span>Agent</span>
+          </button>
+          <button type="button" class="primary-button" @click="void $store.orchestratorPage.applyTopology()">
+            <x-icon>account_tree</x-icon>
+            <span>Apply Topology</span>
+          </button>
+          <p class="orchestrator-status" x-text="$store.orchestratorPage.statusMessage"></p>
+        </header>
+
+        <main class="orchestrator-canvas" x-ref="canvas">
+          <svg class="orchestrator-edges" aria-hidden="true">
+            <defs>
+              <marker id="orchestrator-edge-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M 0 0 L 9 3 L 0 6 z"></path>
+              </marker>
+            </defs>
+          </svg>
+
+          <div class="orchestrator-world">
+            <template x-for="node in ($store.orchestratorPage.graph?.nodes || [])" :key="node.id">
+              <article class="orchestrator-node" :data-node-type="node.type" :style="`transform: translate(${node.x}px, ${node.y}px)`">
+                <button type="button" class="orchestrator-port orchestrator-port--input" title="Input port" aria-label="Input port"></button>
+                <header class="orchestrator-node-header">
+                  <x-icon x-text="node.type === 'docker_container' ? 'deployed_code' : 'smart_toy'"></x-icon>
+                  <span x-text="node.name"></span>
+                  <span class="orchestrator-node-status" :data-status="node.status || 'idle'"></span>
+                </header>
+                <div class="orchestrator-node-body">
+                  <p x-text="node.type"></p>
+                  <p x-text="node.config?.image || node.config?.model || node.config?.endpoint || 'Not configured'"></p>
+                </div>
+                <footer class="orchestrator-node-footer">
+                  <button type="button" class="secondary-button">Logs</button>
+                  <button type="button" class="secondary-button">Run</button>
+                </footer>
+                <button type="button" class="orchestrator-port orchestrator-port--output" title="Output port" aria-label="Output port"></button>
+              </article>
+            </template>
+          </div>
+        </main>
+      </section>
+    </div>
+  </body>
+</html>
