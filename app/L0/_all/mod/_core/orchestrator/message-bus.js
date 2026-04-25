@@ -24,6 +24,7 @@ export function normalizeBusMessage(source = {}) {
 
 export function createMessageBus({ graphId, edges = [] } = {}) {
   const subscribers = new Set();
+  const busGraphId = String(graphId || "").trim();
   const edgeKeys = new Set(edges.map((edge) => `${edge.source}->${edge.target}`));
 
   return {
@@ -32,7 +33,12 @@ export function createMessageBus({ graphId, edges = [] } = {}) {
       return () => subscribers.delete(callback);
     },
     send(source) {
-      const message = normalizeBusMessage({ ...source, graphId: source.graphId || graphId });
+      const callerGraphId = String(source.graphId || "").trim();
+      if (busGraphId && callerGraphId && callerGraphId !== busGraphId) {
+        throw new Error(`Message graphId ${callerGraphId} does not match bus graphId ${busGraphId}.`);
+      }
+
+      const message = normalizeBusMessage({ ...source, graphId: callerGraphId || busGraphId });
       const key = `${message.source}->${message.target}`;
       if (!edgeKeys.has(key)) {
         throw new Error(`No edge allows ${key}.`);

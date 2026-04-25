@@ -32,14 +32,17 @@ export function worldToCanvas(camera, worldX, worldY) {
 
 export function createZoomedCamera({ camera, nextZoom, pointerX, pointerY }) {
   const current = createCamera(camera);
-  const worldPoint = canvasToWorld(current, pointerX, pointerY);
+  const worldPoint = {
+    x: (Number(pointerX) - current.x) / current.zoom,
+    y: (Number(pointerY) - current.y) / current.zoom
+  };
   const zoom = clampZoom(nextZoom);
 
-  return createCamera({
+  return {
     x: Number(pointerX) - worldPoint.x * zoom,
     y: Number(pointerY) - worldPoint.y * zoom,
     zoom
-  });
+  };
 }
 
 function normalizeNumber(value, fallback) {

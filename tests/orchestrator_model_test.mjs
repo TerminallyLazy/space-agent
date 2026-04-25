@@ -170,6 +170,29 @@ test("canvas camera converts coordinates and zooms toward pointer", () => {
   assert.deepEqual(zoomed, { x: -100, y: -100, zoom: 2 });
 });
 
+test("canvas zoom keeps fractional world point anchored under pointer", () => {
+  const camera = { x: 0, y: 0, zoom: 3 };
+  const pointer = { x: 1, y: 1 };
+  const worldPoint = {
+    x: (pointer.x - camera.x) / camera.zoom,
+    y: (pointer.y - camera.y) / camera.zoom
+  };
+
+  const zoomed = createZoomedCamera({
+    camera,
+    nextZoom: 0.1,
+    pointerX: pointer.x,
+    pointerY: pointer.y
+  });
+  const anchoredWorldPoint = {
+    x: (pointer.x - zoomed.x) / zoomed.zoom,
+    y: (pointer.y - zoomed.y) / zoomed.zoom
+  };
+
+  assert.ok(Math.abs(anchoredWorldPoint.x - worldPoint.x) < 1e-12);
+  assert.ok(Math.abs(anchoredWorldPoint.y - worldPoint.y) < 1e-12);
+});
+
 test("message bus routes only across allowed graph edges", () => {
   const bus = createMessageBus({
     graphId: "graph-1",
@@ -187,6 +210,17 @@ test("message bus routes only across allowed graph edges", () => {
   assert.throws(() => {
     bus.send({ source: "node-b", target: "node-a", type: "task", payload: {} });
   }, /No edge allows/u);
+});
+
+test("message bus rejects messages for a different graph", () => {
+  const bus = createMessageBus({
+    graphId: "graph-1",
+    edges: [{ source: "node-a", target: "node-b", protocol: "internal" }]
+  });
+
+  assert.throws(() => {
+    bus.send({ graphId: "graph-2", source: "node-a", target: "node-b", type: "task" });
+  }, /graphId/u);
 });
 
 test("normalizeBusMessage uses stable defaults", () => {
