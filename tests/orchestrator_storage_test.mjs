@@ -58,6 +58,22 @@ function createYamlRuntime() {
   };
 }
 
+function createYamlRuntimeWithCallApi() {
+  const { files, runtime } = createYamlRuntime();
+  delete runtime.api.filePaths;
+  runtime.api.call = async (endpoint, options) => {
+    assert.equal(endpoint, "file_paths");
+    assert.equal(options?.method, "POST");
+
+    const suffix = String(options?.body?.patterns?.[0] || "").replace(/^\*\*\//u, "");
+    return {
+      [options.body.patterns[0]]: [...files.keys()].filter((path) => path.endsWith(suffix))
+    };
+  };
+
+  return { files, runtime };
+}
+
 test("storage path helpers use user orchestrator root", () => {
   assert.equal(buildGraphManifestPath("graph-1"), "~/orchestrator/graph-1/graph.yaml");
   assert.equal(buildNodePath("graph-1", "node-a"), "~/orchestrator/graph-1/nodes/node-a.yaml");
@@ -89,8 +105,36 @@ test("createGraph persists manifest and readGraph loads nodes", async () => {
   assert.equal(loaded.nodes[0].id, "node-a");
 });
 
+test("readGraph preserves manifest node id when node file has no id", async () => {
+  const { runtime, files } = createYamlRuntime();
+  await createGraph({ title: "Ops" }, runtime);
+  files.set(
+    "~/orchestrator/graph-1/graph.yaml",
+    runtime.utils.yaml.stringify({
+      schema: "orchestrator-graph/v1",
+      id: "graph-1",
+      title: "Ops",
+      nodeIds: ["node-a"]
+    })
+  );
+  files.set("~/orchestrator/graph-1/nodes/node-a.yaml", "{}");
+
+  const loaded = await readGraph("graph-1", runtime);
+  assert.equal(loaded.nodes.length, 1);
+  assert.equal(loaded.nodes[0].id, "node-a");
+});
+
 test("listGraphs reads graph manifests", async () => {
   const { runtime } = createYamlRuntime();
+  await createGraph({ title: "First" }, runtime);
+  await createGraph({ title: "Second" }, runtime);
+
+  const graphs = await listGraphs(runtime);
+  assert.deepEqual(graphs.map((graph) => graph.title), ["First", "Second"]);
+});
+
+test("listGraphs supports production file_paths discovery", async () => {
+  const { runtime } = createYamlRuntimeWithCallApi();
   await createGraph({ title: "First" }, runtime);
   await createGraph({ title: "Second" }, runtime);
 

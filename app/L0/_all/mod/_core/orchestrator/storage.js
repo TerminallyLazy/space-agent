@@ -81,8 +81,9 @@ export async function readGraph(graphId, runtimeInput) {
         files: nodeIds.map((nodeId) => ({ path: buildNodePath(manifest.id, nodeId) }))
       })
     : { files: [] };
-  const nodes = (Array.isArray(nodeFiles?.files) ? nodeFiles.files : [])
-    .map((file) => normalizeNode(parseYaml(runtime, file?.content)))
+  const files = Array.isArray(nodeFiles?.files) ? nodeFiles.files : [];
+  const nodes = nodeIds
+    .map((nodeId, index) => normalizeReadNode(runtime, files[index], nodeId))
     .filter((node) => node.id);
 
   return normalizeGraphManifest({
@@ -232,6 +233,15 @@ function normalizeNodes(value) {
   return (Array.isArray(value) ? value : []).map((node) => normalizeNode(node));
 }
 
+function normalizeReadNode(runtime, file, fallbackId) {
+  const parsedNode = parseYaml(runtime, file?.content);
+  const source = parsedNode && typeof parsedNode === "object" && !Array.isArray(parsedNode) ? parsedNode : {};
+  return normalizeNode({
+    ...source,
+    id: source.id || fallbackId
+  });
+}
+
 function normalizeNodeIds(value) {
   const ids = Array.isArray(value) ? value : [];
   return [...new Set(ids.map((id) => normalizePathSegment(id)).filter(Boolean))];
@@ -251,7 +261,7 @@ function normalizeTimestamp(value) {
 
 function createGraphId(existingGraphs) {
   const ids = new Set((Array.isArray(existingGraphs) ? existingGraphs : []).map((graph) => graph.id));
-  let index = ids.size + 1;
+  let index = 1;
   let id = `graph-${index}`;
 
   while (ids.has(id)) {
