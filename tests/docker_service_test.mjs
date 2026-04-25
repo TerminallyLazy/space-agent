@@ -73,3 +73,28 @@ test("createDockerService delegates list and start to docker client", async () =
     ["start", "abc"]
   ]);
 });
+
+test("docker_start endpoint delegates to service", async () => {
+  const module = await import("../server/api/docker_start.js?test=start");
+  const calls = [];
+  const result = await module.post({
+    body: { containerId: "abc" },
+    dockerService: {
+      start: async (containerId) => {
+        calls.push(containerId);
+        return { ok: true, containerId };
+      }
+    }
+  });
+
+  assert.deepEqual(calls, ["abc"]);
+  assert.deepEqual(result, { ok: true, containerId: "abc" });
+});
+
+test("docker_exec endpoint requires admin", async () => {
+  const module = await import("../server/api/docker_exec.js?test=exec");
+  await assert.rejects(() => module.post({
+    user: { groups: ["users"] },
+    body: { containerId: "abc", command: "ls" }
+  }), /_admin/u);
+});

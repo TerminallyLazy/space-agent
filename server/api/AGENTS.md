@@ -139,6 +139,12 @@ Important notes:
 - `user_self_info` returns the authenticated user's derived identity plus browser-bootstrap crypto metadata: `{ username, fullName, groups, managedGroups, sessionId, userCryptoKeyId, userCryptoState }`
 - `password_generate` is an authenticated utility endpoint that returns the backend-sealed `password.json` payload and should stay narrow
 
+Docker endpoints:
+
+- `docker_list`, `docker_inspect`, `docker_logs`, `docker_start`, `docker_stop`, and `docker_restart` expose authenticated Docker container inspection and lifecycle helpers for Orchestrator.
+- `docker_create`, `docker_remove`, `docker_exec`, `docker_network_create`, `docker_network_connect`, and `docker_network_disconnect` require `_admin` because they mutate local container state or execute code.
+- All Docker behavior delegates to `server/lib/docker/client.js`; endpoint files validate request shape only.
+
 ## Handler Contract
 
 Handlers receive the request context assembled by `server/router/router.js`, including:
