@@ -145,6 +145,12 @@ Docker endpoints:
 - `docker_create`, `docker_remove`, `docker_exec`, `docker_network_create`, `docker_network_connect`, and `docker_network_disconnect` require `_admin` because they mutate local container state or execute code.
 - All Docker behavior delegates to `server/lib/docker/client.js`; endpoint files validate request shape only.
 
+Agent runner endpoints:
+
+- `agent_run_start`, `agent_run_status`, `agent_run_stop`, and `agent_run_events` expose Orchestrator's graph-open SDK runner contract.
+- Credentials are supplied per run by the authenticated browser and must not be written to disk.
+- Endpoint files delegate to `server/lib/agent_runners/service.js`.
+
 ## Handler Contract
 
 Handlers receive the request context assembled by `server/router/router.js`, including:

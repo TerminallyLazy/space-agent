@@ -37,6 +37,28 @@ test("createRunRecord stores compact status", () => {
   assert.equal(run.status, "running");
 });
 
+test("agent_run_start endpoint delegates to runner service", async () => {
+  const module = await import("../server/api/agent_run_start.js?test=start");
+  const result = await module.post({
+    body: { provider: "openai" },
+    runnerService: {
+      start: async (payload) => ({ id: "run-1", status: "completed", provider: payload.provider })
+    }
+  });
+  assert.deepEqual(result, { id: "run-1", status: "completed", provider: "openai" });
+});
+
+test("agent_run_events endpoint returns events", async () => {
+  const module = await import("../server/api/agent_run_events.js?test=events");
+  const result = await module.get({
+    query: { runId: "run-1" },
+    runnerService: {
+      events: (runId) => [{ runId, type: "result" }]
+    }
+  });
+  assert.deepEqual(result, [{ runId: "run-1", type: "result" }]);
+});
+
 test("runner service stores status and events", async () => {
   const service = createRunnerService({
     adapters: {
