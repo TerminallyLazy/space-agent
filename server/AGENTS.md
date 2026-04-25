@@ -34,6 +34,8 @@ Current subsystem-local docs in the server tree:
 - `server/lib/share/AGENTS.md`
 - `server/lib/tmp/AGENTS.md`
 - `server/lib/git/AGENTS.md`
+- `server/lib/docker/AGENTS.md`
+- `server/lib/agent_runners/AGENTS.md`
 
 Update rules:
 
@@ -121,6 +123,8 @@ Current server layout:
 - `server/lib/share/`: backend-owned hosted-share archive storage, ZIP validation, authenticated import, and anonymous guest-clone helpers
 - `server/lib/tmp/`: `server/tmp/` lifecycle, stale-entry cleanup, and low-RAM ZIP archive creation for attachment-style downloads
 - `server/lib/git/`: Git backend abstraction used by update flows and Git-backed module installs
+- `server/lib/docker/`: Orchestrator Docker client setup, `_admin` permission gates, normalized container summaries, and shared Docker service helpers used by `docker_*` API endpoints
+- `server/lib/agent_runners/`: Orchestrator server-side agent run service, in-memory run state, and provider adapters for Claude, OpenAI, and A2A used by `agent_run_*` API endpoints
 - `server/tmp/`: transient disk-backed artifacts such as folder-download ZIP files
 
 ## Request Flow And Runtime Contracts

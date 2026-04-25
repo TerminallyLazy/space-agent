@@ -133,6 +133,17 @@ Important runtime endpoints:
 - lets `_core/user_crypto` restore the unlocked browser key from the encrypted `localStorage` blob without storing that wrapping key at rest
 - does not persist per-session restore grants or any backend copy of the user master key
 
+## Orchestrator Endpoints
+
+Orchestrator surfaces split into two endpoint families that delegate to dedicated server helpers:
+
+- `docker_list`, `docker_inspect`, `docker_logs`, `docker_start`, `docker_stop`, and `docker_restart` expose authenticated Docker container inspection and lifecycle helpers; they delegate to `server/lib/docker/client.js`
+- `docker_create`, `docker_remove`, `docker_exec`, `docker_network_create`, `docker_network_connect`, and `docker_network_disconnect` mutate local container state or run code; they require `_admin` membership through `assertAdmin(context)`
+- `agent_run_start`, `agent_run_status`, `agent_run_stop`, and `agent_run_events` expose the graph-open SDK runner contract; they delegate to `server/lib/agent_runners/service.js`
+- per-run credentials arrive in the request body; they are never written to disk, and the runner service replays Claude Agent SDK, OpenAI Agents SDK, and A2A endpoints for each in-memory run
+
+The `DOCKER_HOST` runtime parameter selects the Docker socket path or TCP host for `server/lib/docker/client.js`.
+
 ## Health Helper
 
 The frontend API client exposes `space.api.health()` for the health endpoint.

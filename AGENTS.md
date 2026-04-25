@@ -120,8 +120,10 @@ Server docs:
 - `/server/AGENTS.md`
 - `/server/api/AGENTS.md`
 - `/server/jobs/AGENTS.md`
+- `/server/lib/agent_runners/AGENTS.md`
 - `/server/lib/auth/AGENTS.md`
 - `/server/lib/customware/AGENTS.md`
+- `/server/lib/docker/AGENTS.md`
 - `/server/lib/file_watch/AGENTS.md`
 - `/server/lib/git/AGENTS.md`
 - `/server/lib/share/AGENTS.md`

@@ -114,6 +114,12 @@ Use it to decide whether a write belongs in:
 - a managed `L1/<group>/...`
 - a cross-user or admin-only path only when `_admin` access is explicitly available
 
+Feature-specific writable roots that follow the same model:
+
+- `~/orchestrator/<graph-id>/graph.yaml` plus `~/orchestrator/<graph-id>/nodes/<node-id>.yaml` for Orchestrator graphs and nodes
+- `~/orchestrator/<graph-id>/runs/` and `~/orchestrator/<graph-id>/messages/` for compact graph-open run and message activity records
+- `~/orchestrator/secrets/<ref>.yaml` for browser-owned encrypted credential records referenced by `credentialRef` from agent nodes
+
 ## Related Docs
 
 - `app/modules-and-extensions.md`
