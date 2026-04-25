@@ -74,6 +74,7 @@ This scope owns:
 - `prompt_budget_trim_test.mjs`: focused shared prompt-budget coverage for the `250`-token minimum contributor trim plan, one-shot outlier trimming, and `system` section-body fallback when contributor-level trims are too small
 - `promptinclude_test.mjs`: focused prompt-include coverage for alphabetical include discovery plus keyed system or transient prompt-item output, ordering, and fenced transient rendering
 - `onscreen_agent_prompt_shape_test.mjs`: focused overlay-agent prompt-shaping coverage for attachment block splitting and the example-to-live-history reset boundary
+- `orchestrator_storage_test.mjs`: focused browser-owned YAML storage coverage for `_core/orchestrator` graph manifest paths, node paths, graph creation, graph listing through indexed path discovery, and read/save behavior with a mocked app-file runtime
 - `huggingface_prompt_shape_test.mjs`: focused local-LLM prompt-shaping coverage for the Hugging Face API-style fallback prompt format and the onscreen local-client folded-transport message contract
 - `router_cache_headers_test.mjs`: focused server-router coverage for no-store cache headers on `/mod/...`, page shells, and public page resources so runtime code updates replace stale origin-scoped module caches after reload
 - shared expectations for test config, fixtures, scripted execution, and saved evaluation results
