@@ -33,8 +33,15 @@
           <p class="orchestrator-status" x-text="$store.orchestratorPage.statusMessage"></p>
         </header>
 
-        <main class="orchestrator-canvas" x-ref="canvas">
-          <svg class="orchestrator-edges" aria-hidden="true">
+        <main
+          class="orchestrator-canvas"
+          x-ref="canvas"
+          @pointerdown="$store.orchestratorPage.handleCanvasPointerDown($event)"
+          @pointermove.window="$store.orchestratorPage.handlePointerMove($event)"
+          @pointerup.window="$store.orchestratorPage.handlePointerUp($event)"
+          @wheel.prevent="$store.orchestratorPage.handleWheel($event)"
+        >
+          <svg class="orchestrator-edges" aria-hidden="true" :style="`transform: translate(${$store.orchestratorPage.camera.x}px, ${$store.orchestratorPage.camera.y}px) scale(${$store.orchestratorPage.camera.zoom})`">
             <defs>
               <marker id="orchestrator-edge-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
                 <path d="M 0 0 L 9 3 L 0 6 z"></path>
@@ -42,7 +49,7 @@
             </defs>
           </svg>
 
-          <div class="orchestrator-world">
+          <div class="orchestrator-world" :style="`transform: translate(${$store.orchestratorPage.camera.x}px, ${$store.orchestratorPage.camera.y}px) scale(${$store.orchestratorPage.camera.zoom})`">
             <template x-for="node in ($store.orchestratorPage.graph?.nodes || [])" :key="node.id">
               <article class="orchestrator-node" :data-node-type="node.type" :style="`transform: translate(${node.x}px, ${node.y}px)`">
                 <button type="button" class="orchestrator-port orchestrator-port--input" title="Input port" aria-label="Input port"></button>

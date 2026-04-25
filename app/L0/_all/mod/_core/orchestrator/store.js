@@ -1,4 +1,9 @@
+import { createCamera, createZoomedCamera } from "./canvas.js";
 import { ORCHESTRATOR_ROUTE_PATH, ORCHESTRATOR_STORE_NAME } from "./constants.js";
+import { decryptCredentialForRun } from "./credentials.js";
+import { buildRunRequest } from "./agent-adapters.js";
+import { createDockerClient } from "./docker-client.js";
+import { createRunnerClient } from "./runner-client.js";
 import { normalizeEdge } from "./edges.js";
 import { createDefaultNode } from "./node-types.js";
 import { createGraph, listGraphs, readGraph, saveGraph } from "./storage.js";
@@ -86,12 +91,22 @@ export function installOrchestratorRuntimeNamespace({ activeStore: suppliedStore
   return namespace;
 }
 
-function createOrchestratorPageModel() {
+function resolveContainerId(node) {
+  return String(node?.runtime?.containerId || node?.config?.containerId || "").trim();
+}
+
+export function createOrchestratorPageModel(deps = {}) {
+  const dockerClient = deps.dockerClient || (globalThis.space ? createDockerClient() : null);
+  const runnerClient = deps.runnerClient || (globalThis.space ? createRunnerClient() : null);
+
   return {
     graph: null,
     graphs: [],
-    camera: { x: 0, y: 0, zoom: 1 },
+    camera: createCamera(),
     statusMessage: "",
+    dockerClient,
+    runnerClient,
+    _panState: null,
     get hasGraph() {
       return Boolean(this.graph?.id);
     },
@@ -167,29 +182,114 @@ function createOrchestratorPageModel() {
       return this.persistGraph();
     },
     async applyTopology() {
-      this.statusMessage = "Topology application will call Docker endpoints after backend APIs are installed.";
-      return { ok: true, status: this.statusMessage };
+      if (!this.graph) throw new Error("No graph is open.");
+      if (!this.dockerClient) throw new Error("Docker client is not available.");
+      const networkName = this.graph.topology?.dockerNetworkName || `orchestrator-${this.graph.id}`;
+      const connected = new Set();
+      await this.dockerClient.networkCreate(networkName).catch((error) => {
+        if (!/already exists/iu.test(error.message || "")) throw error;
+      });
+      for (const edge of this.graph.edges || []) {
+        if (edge.type !== "network") continue;
+        for (const nodeId of [edge.source, edge.target]) {
+          const node = this.nodesById[nodeId];
+          const containerId = resolveContainerId(node);
+          if (containerId && !connected.has(containerId)) {
+            await this.dockerClient.networkConnect(networkName, containerId);
+            connected.add(containerId);
+          }
+        }
+      }
+      this.statusMessage = `Applied ${connected.size} container network connection${
+        connected.size === 1 ? "" : "s"
+      }.`;
+      return { ok: true, connected: connected.size };
     },
     sendMessage(message) {
       return message;
     },
-    async runAgentTask() {
-      throw new Error("Runner endpoints are not installed yet.");
+    async runAgentTask({ nodeId, input } = {}) {
+      if (!this.graph) throw new Error("No graph is open.");
+      if (!this.runnerClient) throw new Error("Runner client is not available.");
+      const node = this.nodesById[nodeId];
+      if (!node) throw new Error(`Node ${nodeId} is not in the current graph.`);
+      const credentialRef = String(node.runtime?.credentialRef || "").trim();
+      const credential = credentialRef ? await decryptCredentialForRun(credentialRef) : null;
+      const request = buildRunRequest({
+        graphId: this.graph.id,
+        node,
+        input: input || "",
+        credential
+      });
+      return this.runnerClient.start(request);
     },
-    async startContainer() {
-      throw new Error("Docker endpoints are not installed yet.");
+    async startContainer(nodeId) {
+      if (!this.dockerClient) throw new Error("Docker client is not available.");
+      const containerId = resolveContainerId(this.nodesById[nodeId]);
+      if (!containerId) throw new Error(`Node ${nodeId} has no container id.`);
+      return this.dockerClient.start(containerId);
     },
-    async stopContainer() {
-      throw new Error("Docker endpoints are not installed yet.");
+    async stopContainer(nodeId) {
+      if (!this.dockerClient) throw new Error("Docker client is not available.");
+      const containerId = resolveContainerId(this.nodesById[nodeId]);
+      if (!containerId) throw new Error(`Node ${nodeId} has no container id.`);
+      return this.dockerClient.stop(containerId);
     },
-    async restartContainer() {
-      throw new Error("Docker endpoints are not installed yet.");
+    async restartContainer(nodeId) {
+      if (!this.dockerClient) throw new Error("Docker client is not available.");
+      const containerId = resolveContainerId(this.nodesById[nodeId]);
+      if (!containerId) throw new Error(`Node ${nodeId} has no container id.`);
+      return this.dockerClient.restart(containerId);
     },
-    async getContainerLogs() {
-      throw new Error("Docker endpoints are not installed yet.");
+    async getContainerLogs(nodeId, options = {}) {
+      if (!this.dockerClient) throw new Error("Docker client is not available.");
+      const containerId = resolveContainerId(this.nodesById[nodeId]);
+      if (!containerId) throw new Error(`Node ${nodeId} has no container id.`);
+      return this.dockerClient.logs(containerId, options);
     },
-    async execInContainer() {
-      throw new Error("Docker endpoints are not installed yet.");
+    async execInContainer({ nodeId, command } = {}) {
+      if (!this.dockerClient) throw new Error("Docker client is not available.");
+      const containerId = resolveContainerId(this.nodesById[nodeId]);
+      if (!containerId) throw new Error(`Node ${nodeId} has no container id.`);
+      return this.dockerClient.exec({ containerId, command });
+    },
+    handleCanvasPointerDown(event) {
+      const target = event?.target;
+      if (!target || target.closest?.(".orchestrator-node, .orchestrator-port")) return;
+      this._panState = {
+        startX: event.clientX,
+        startY: event.clientY,
+        cameraX: this.camera.x,
+        cameraY: this.camera.y
+      };
+    },
+    handlePointerMove(event) {
+      if (!this._panState) return;
+      this.camera = {
+        ...this.camera,
+        x: this._panState.cameraX + (event.clientX - this._panState.startX),
+        y: this._panState.cameraY + (event.clientY - this._panState.startY)
+      };
+    },
+    handlePointerUp() {
+      this._panState = null;
+    },
+    handleWheel(event) {
+      if (event.ctrlKey || event.metaKey) {
+        const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
+        this.camera = createZoomedCamera({
+          camera: this.camera,
+          nextZoom: this.camera.zoom * factor,
+          pointerX: event.clientX,
+          pointerY: event.clientY
+        });
+        return;
+      }
+      this.camera = {
+        ...this.camera,
+        x: this.camera.x - event.deltaX,
+        y: this.camera.y - event.deltaY
+      };
     }
   };
 }

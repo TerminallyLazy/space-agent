@@ -107,3 +107,30 @@ test("installOrchestratorRuntimeNamespace exposes graph APIs", async () => {
 
   globalThis.space = previousSpace;
 });
+
+test("store applyTopology calls docker client for network edges", async () => {
+  const { createOrchestratorPageModel } = await import("../app/L0/_all/mod/_core/orchestrator/store.js?test=model");
+  const calls = [];
+  const store = createOrchestratorPageModel({
+    dockerClient: {
+      networkCreate: async (name) => calls.push(["networkCreate", name]),
+      networkConnect: async (name, id) => calls.push(["networkConnect", name, id])
+    }
+  });
+  store.graph = {
+    id: "graph-1",
+    topology: { dockerNetworkName: "orchestrator-graph-1" },
+    nodes: [
+      { id: "node-a", type: "docker_container", runtime: { containerId: "a" } },
+      { id: "node-b", type: "docker_container", runtime: { containerId: "b" } }
+    ],
+    edges: [{ source: "node-a", target: "node-b", type: "network" }]
+  };
+
+  await store.applyTopology();
+  assert.deepEqual(calls, [
+    ["networkCreate", "orchestrator-graph-1"],
+    ["networkConnect", "orchestrator-graph-1", "a"],
+    ["networkConnect", "orchestrator-graph-1", "b"]
+  ]);
+});
