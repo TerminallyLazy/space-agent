@@ -223,6 +223,26 @@ test("message bus rejects messages for a different graph", () => {
   }, /graphId/u);
 });
 
+test("message bus requires matching edge protocol", () => {
+  const bus = createMessageBus({
+    graphId: "graph-1",
+    edges: [{ source: "node-a", target: "node-b", protocol: "internal" }]
+  });
+
+  const delivered = [];
+  bus.subscribe((message) => delivered.push(message));
+
+  bus.send({ source: "node-a", target: "node-b", type: "task" });
+  bus.send({ source: "node-a", target: "node-b", protocol: "internal", type: "status" });
+
+  assert.equal(delivered.length, 2);
+  assert.equal(delivered[0].protocol, "internal");
+  assert.equal(delivered[1].protocol, "internal");
+  assert.throws(() => {
+    bus.send({ source: "node-a", target: "node-b", protocol: "a2a", type: "task" });
+  }, /No edge allows/u);
+});
+
 test("normalizeBusMessage uses stable defaults", () => {
   const message = normalizeBusMessage({
     graphId: "graph-1",

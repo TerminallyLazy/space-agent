@@ -25,7 +25,7 @@ export function normalizeBusMessage(source = {}) {
 export function createMessageBus({ graphId, edges = [] } = {}) {
   const subscribers = new Set();
   const busGraphId = String(graphId || "").trim();
-  const edgeKeys = new Set(edges.map((edge) => `${edge.source}->${edge.target}`));
+  const edgeKeys = new Set(edges.map((edge) => createRouteKey(edge)));
 
   return {
     subscribe(callback) {
@@ -39,7 +39,7 @@ export function createMessageBus({ graphId, edges = [] } = {}) {
       }
 
       const message = normalizeBusMessage({ ...source, graphId: callerGraphId || busGraphId });
-      const key = `${message.source}->${message.target}`;
+      const key = createRouteKey(message);
       if (!edgeKeys.has(key)) {
         throw new Error(`No edge allows ${key}.`);
       }
@@ -47,4 +47,11 @@ export function createMessageBus({ graphId, edges = [] } = {}) {
       return message;
     }
   };
+}
+
+function createRouteKey(source) {
+  const sourceNode = String(source.source || "").trim();
+  const targetNode = String(source.target || "").trim();
+  const protocol = MESSAGE_PROTOCOLS.has(source.protocol) ? source.protocol : "internal";
+  return `${sourceNode}->${targetNode}:${protocol}`;
 }
