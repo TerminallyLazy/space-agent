@@ -90,3 +90,20 @@ test("buildRunRequest rejects provider mismatch and includes node config", async
   assert.equal(request.credential.secret, "sk");
   assert.throws(() => buildRunRequest({ graphId: "graph-1", node, input: "Do it", credential: { provider: "anthropic", secret: "sk" } }), /Credential provider/u);
 });
+
+test("installOrchestratorRuntimeNamespace exposes graph APIs", async () => {
+  const previousSpace = globalThis.space;
+  const { runtime } = createRuntime();
+  globalThis.space = runtime;
+
+  const { installOrchestratorRuntimeNamespace } = await import("../app/L0/_all/mod/_core/orchestrator/store.js?test=namespace");
+  const namespace = installOrchestratorRuntimeNamespace({ activeStore: null });
+
+  assert.equal(globalThis.space.orchestrator, namespace);
+  assert.equal(typeof namespace.listGraphs, "function");
+  assert.equal(typeof namespace.createGraph, "function");
+  assert.equal(typeof namespace.addNode, "function");
+  assert.equal(typeof namespace.addEdge, "function");
+
+  globalThis.space = previousSpace;
+});
