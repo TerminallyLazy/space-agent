@@ -15,6 +15,7 @@ This doc covers how browser code is delivered and composed.
 - `app/L0/_all/mod/_core/login_hooks/AGENTS.md`
 - `app/L0/_all/mod/_core/open_router/AGENTS.md`
 - `app/L0/_all/mod/_core/onscreen_menu/AGENTS.md`
+- `app/L0/_all/mod/_core/orchestrator/AGENTS.md`
 - `app/L0/_all/mod/_core/promptinclude/AGENTS.md`
 - `app/L0/_all/mod/_core/router/AGENTS.md`
 - `app/L0/_all/mod/_core/time_travel/AGENTS.md`
@@ -40,6 +41,7 @@ Examples:
 - `/mod/_core/documentation/documentation.js`
 - `/mod/_core/file_explorer/view.html`
 - `/mod/_core/huggingface/view.html`
+- `/mod/_core/orchestrator/constants.js`
 - `/mod/_core/webllm/view.html`
 
 The backend resolves those requests through layered customware inheritance, so the same `/mod/...` URL may be backed by `L0`, `L1`, or `L2`.
@@ -128,6 +130,7 @@ Rules:
 - `_core/login_hooks` is another headless helper module: it extends `_core/framework/initializer.js/initialize/end`, checks for the client-owned `~/meta/login_hooks.json` marker, dispatches `_core/login_hooks/first_login` once when that marker is absent, and dispatches `_core/login_hooks/any_login` when the authenticated shell was reached directly from `/login`; `_core/spaces` currently consumes `_core/login_hooks/first_login` through `ext/js/_core/login_hooks/first_login/big-bang-space.js` to copy or reuse the module-owned `Big Bang` onboarding space and rewrite the root-shell default route before dashboard loads
 - `_core/user_crypto` is a headless runtime helper module: it extends `_core/framework/initializer.js/initialize/end`, reads `space.api.userSelfInfo()` for the current backend `sessionId` plus `userCrypto` state, restores the unlocked browser key from per-tab session storage when available and otherwise from the encrypted `localStorage` blob through `/api/user_crypto_session_key`, uses that same endpoint to backfill the persisted local blob from an already-unlocked tab, stores that blob under one fixed key, logs concise `console.warn(...)` messages when cache or bootstrap restore paths fail but the module can still continue fail-soft, and signs the browser out when the backend reports that the user still needs a first-login `userCrypto` provisioning run at `/login` or when the persisted blob is stale for the current session
 - `_core/open_router` is a headless provider-policy module: it extends `_core/onscreen_agent/api.js/prepareOnscreenAgentApiRequest/end` and `_core/admin/views/agent/api.js/prepareAdminAgentApiRequest/end`, detects when API mode targets an OpenRouter upstream endpoint, and applies the OpenRouter-specific request headers there instead of hardcoding them inside the chat runtimes
+- `_core/orchestrator` is currently a model-only helper module: its local `AGENTS.md` owns the graph-model contract, and its JavaScript files define versioned graph constants, graph metadata normalization, node defaults and categories, edge type derivation, edge normalization, semantic edge colors, and Bezier path helpers without adding UI, storage, backend APIs, or a runtime namespace yet
 
 Uncached HTML `<x-extension>` lookups are grouped before they hit `/api/extensions_load`:
 

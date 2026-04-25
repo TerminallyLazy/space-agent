@@ -1,5 +1,7 @@
-import { EDGE_COLORS, EDGE_PROTOCOLS } from "./constants.js";
+import { EDGE_COLORS, EDGE_PROTOCOLS, EDGE_TYPES } from "./constants.js";
 import { getNodeCategory } from "./node-types.js";
+
+const EDGE_TYPE_SET = new Set(EDGE_TYPES);
 
 export function deriveEdgeType(sourceNode, targetNode) {
   const sourceCategory = getNodeCategory(sourceNode);
@@ -42,11 +44,17 @@ export function normalizeEdge(source = {}, options = {}) {
     throw new Error("Cannot create an edge with a missing endpoint.");
   }
 
-  const type = source.type || deriveEdgeType(sourceNode, targetNode);
+  const requestedType = String(source.type || "").trim();
+  if (requestedType && !EDGE_TYPE_SET.has(requestedType)) {
+    throw new Error(`Unsupported edge type: ${requestedType}.`);
+  }
+
+  const type = requestedType || deriveEdgeType(sourceNode, targetNode);
   const protocol = EDGE_PROTOCOLS.includes(source.protocol) ? source.protocol : "internal";
+  const id = String(source.id || "").trim() || `edge-${sourceId}-${targetId}`;
 
   return {
-    id: String(source.id || `edge-${sourceId}-${targetId}`).trim(),
+    id,
     source: sourceId,
     target: targetId,
     type,

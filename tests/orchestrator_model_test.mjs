@@ -106,6 +106,36 @@ test("normalizeEdge rejects self loops and duplicate keys", () => {
   }), /duplicate/u);
 });
 
+test("normalizeEdge falls back from blank ids and rejects unsupported types", () => {
+  const edge = normalizeEdge({
+    id: "   ",
+    source: "node-a",
+    target: "node-b",
+    type: "   "
+  }, {
+    nodesById: {
+      "node-a": { type: "openai_agent" },
+      "node-b": { type: "docker_container" }
+    },
+    existingEdges: []
+  });
+
+  assert.equal(edge.id, "edge-node-a-node-b");
+  assert.equal(edge.type, "control");
+
+  assert.throws(() => normalizeEdge({
+    source: "node-a",
+    target: "node-b",
+    type: "webhook"
+  }, {
+    nodesById: {
+      "node-a": { type: "openai_agent" },
+      "node-b": { type: "docker_container" }
+    },
+    existingEdges: []
+  }), /Unsupported edge type/u);
+});
+
 test("edge colors are stable semantic values", () => {
   assert.equal(resolveEdgeColor("network"), "rgba(74, 158, 255, 0.68)");
   assert.equal(resolveEdgeColor("control"), "rgba(255, 180, 50, 0.78)");
