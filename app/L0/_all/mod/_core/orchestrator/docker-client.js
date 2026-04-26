@@ -38,19 +38,19 @@ export function createDockerClient(runtimeInput) {
       });
     },
     networkCreate(config = {}) {
-      return mutation(runtime, "docker_network_create", config);
+      return mutation(runtime, "docker_network_create", normalizeNetworkCreatePayload(config));
     },
-    networkConnect(networkId, containerId, options = {}) {
+    networkConnect(networkName, containerId, options = {}) {
       return mutation(runtime, "docker_network_connect", {
         ...normalizeBody(options),
-        networkId: normalizeId(networkId),
+        networkName: normalizeId(networkName),
         containerId: normalizeId(containerId)
       });
     },
-    networkDisconnect(networkId, containerId, options = {}) {
+    networkDisconnect(networkName, containerId, options = {}) {
       return mutation(runtime, "docker_network_disconnect", {
         ...normalizeBody(options),
-        networkId: normalizeId(networkId),
+        networkName: normalizeId(networkName),
         containerId: normalizeId(containerId)
       });
     }
@@ -83,6 +83,15 @@ function normalizeId(value) {
 
 function normalizeBody(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? { ...value } : {};
+}
+
+function normalizeNetworkCreatePayload(value) {
+  if (typeof value === "string") {
+    return { networkName: value.trim() };
+  }
+  const body = normalizeBody(value);
+  const networkName = String(body.networkName || body.name || "").trim();
+  return { ...body, networkName };
 }
 
 function normalizeQuery(value) {

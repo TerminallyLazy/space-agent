@@ -11,5 +11,5 @@ export async function get(context) {
     error.statusCode = 400;
     throw error;
   }
-  return getService(context).status(runId);
+  return { run: getService(context).status(runId) };
 }

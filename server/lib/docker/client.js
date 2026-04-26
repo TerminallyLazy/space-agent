@@ -1,5 +1,7 @@
 import Docker from "dockerode";
 
+import { getRuntimeGroupIndex } from "../customware/group_runtime.js";
+
 const MANAGED_LABEL_PREFIX = "space.orchestrator.";
 
 export function resolveDockerOptions(runtimeParams) {
@@ -26,12 +28,26 @@ export function createDockerClient(runtimeParams) {
 }
 
 export function assertAdmin(context) {
-  const groups = context.user?.groups || [];
-  if (!groups.includes("_admin")) {
-    const error = new Error("Docker mutation requires _admin membership.");
-    error.statusCode = 403;
-    throw error;
+  const username = context.user?.username || "";
+  if (username) {
+    const groups = context.user?.groups;
+    if (Array.isArray(groups) && groups.includes("_admin")) {
+      return;
+    }
+
+    const groupIndex = getRuntimeGroupIndex(context.watchdog, context.runtimeParams);
+    if (
+      groupIndex &&
+      typeof groupIndex.isUserInGroup === "function" &&
+      groupIndex.isUserInGroup(username, "_admin")
+    ) {
+      return;
+    }
   }
+
+  const error = new Error("Docker mutation requires _admin membership.");
+  error.statusCode = 403;
+  throw error;
 }
 
 export function normalizeContainerSummary(container) {

@@ -25,13 +25,22 @@ export function buildRunRequest({ graphId, node, input, credential } = {}) {
     throw new Error(`Credential provider ${credentialProvider} does not match node provider ${provider}.`);
   }
 
+  const clonedConfig = clonePlainObject(node?.config);
+  const clonedRuntime = clonePlainObject(node?.runtime);
   return {
     graphId: normalizeInlineText(graphId),
     nodeId: normalizeInlineText(node?.id),
     provider,
     input,
-    config: clonePlainObject(node?.config),
-    runtime: clonePlainObject(node?.runtime),
+    config: clonedConfig,
+    runtime: clonedRuntime,
+    node: {
+      id: normalizeInlineText(node?.id),
+      type: String(node?.type || ""),
+      name: String(node?.name || ""),
+      config: clonedConfig,
+      runtime: clonedRuntime
+    },
     credential: credential ? { ...credential, provider: credentialProvider || provider } : null
   };
 }

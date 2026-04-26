@@ -18,55 +18,123 @@
 
       <section class="orchestrator-shell" x-show="$store.orchestratorPage" x-cloak>
         <header class="orchestrator-toolbar">
-          <button type="button" class="secondary-button" @click="void $store.orchestratorPage.addNode({ type: 'docker_container', x: 80, y: 80 })">
+          <button type="button" class="secondary-button" @click="void $store.orchestratorPage.safeAddNode({ type: 'docker_container', x: 80, y: 80 })">
             <x-icon>deployed_code</x-icon>
             <span>Container</span>
           </button>
-          <button type="button" class="secondary-button" @click="void $store.orchestratorPage.addNode({ type: 'openai_agent', x: 360, y: 120 })">
+          <button type="button" class="secondary-button" @click="void $store.orchestratorPage.safeAddAgentNode({ x: 360, y: 120 })">
             <x-icon>smart_toy</x-icon>
             <span>Agent</span>
           </button>
-          <button type="button" class="primary-button" @click="void $store.orchestratorPage.applyTopology()">
+          <button type="button" class="primary-button" @click="void $store.orchestratorPage.safeApplyTopology()">
             <x-icon>account_tree</x-icon>
             <span>Apply Topology</span>
           </button>
-          <p class="orchestrator-status" x-text="$store.orchestratorPage.statusMessage"></p>
+          <button type="button" class="secondary-button" @click="void $store.orchestratorPage.clearAllNodes()">
+            <x-icon>delete_sweep</x-icon>
+            <span>Clear All</span>
+          </button>
+          <p class="orchestrator-status">
+            <span x-text="`graph=${$store.orchestratorPage?.graph?.id || 'none'} nodes=${$store.orchestratorPage?.graph?.nodes?.length || 0}`"></span>
+            <span x-text="$store.orchestratorPage?.statusMessage ? ' | ' + $store.orchestratorPage.statusMessage : ''"></span>
+          </p>
         </header>
 
         <main
           class="orchestrator-canvas"
           x-ref="canvas"
           @pointerdown="$store.orchestratorPage.handleCanvasPointerDown($event)"
-          @pointermove.window="$store.orchestratorPage.handlePointerMove($event)"
-          @pointerup.window="$store.orchestratorPage.handlePointerUp($event)"
+          @pointermove.window="$store.orchestratorPage.handlePointerMove($event); $store.orchestratorPage.handlePortPointerMove($event)"
+          @pointerup.window="$store.orchestratorPage.handlePointerUp($event); $store.orchestratorPage.handlePortPointerUp($event)"
+          @pointercancel.window="$store.orchestratorPage.handlePortPointerUp($event)"
           @wheel.prevent="$store.orchestratorPage.handleWheel($event)"
         >
-          <svg class="orchestrator-edges" aria-hidden="true" :style="`transform: translate(${$store.orchestratorPage.camera.x}px, ${$store.orchestratorPage.camera.y}px) scale(${$store.orchestratorPage.camera.zoom})`">
-            <defs>
-              <marker id="orchestrator-edge-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-                <path d="M 0 0 L 9 3 L 0 6 z"></path>
-              </marker>
-            </defs>
-          </svg>
+          <svg class="orchestrator-edges"
+            :style="`transform: translate(${$store.orchestratorPage.camera.x}px, ${$store.orchestratorPage.camera.y}px) scale(${$store.orchestratorPage.camera.zoom})`"
+            x-html="$store.orchestratorPage.edgesSvgInner"
+            @click="$store.orchestratorPage.handleEdgeClick($event)"></svg>
 
           <div class="orchestrator-world" :style="`transform: translate(${$store.orchestratorPage.camera.x}px, ${$store.orchestratorPage.camera.y}px) scale(${$store.orchestratorPage.camera.zoom})`">
-            <template x-for="node in ($store.orchestratorPage.graph?.nodes || [])" :key="node.id">
-              <article class="orchestrator-node" :data-node-type="node.type" :style="`transform: translate(${node.x}px, ${node.y}px)`">
-                <button type="button" class="orchestrator-port orchestrator-port--input" title="Input port" aria-label="Input port"></button>
+            <template x-for="node in $store.orchestratorPage.graphNodes" :key="node.id">
+              <article class="orchestrator-node" :data-node-type="node.type" :data-node-id="node.id" :style="`transform: translate(${node.x}px, ${node.y}px)`"
+                @pointerdown="$store.orchestratorPage.handleNodePointerDown($event, node.id)"
+                @pointermove="$store.orchestratorPage.handleNodePointerMove($event); $store.orchestratorPage.handlePortPointerMove($event)"
+                @pointerup="$store.orchestratorPage.handleNodePointerUp($event); $store.orchestratorPage.handlePortPointerUp($event)"
+                @pointercancel="$store.orchestratorPage.handleNodePointerUp($event); $store.orchestratorPage.handlePortPointerUp($event)">
+                <button type="button" class="orchestrator-port orchestrator-port--input" title="Input port" aria-label="Input port"
+                  :data-pending="$store.orchestratorPage.isPortPending(node.id, 'input')"
+                  @pointerdown.stop="$store.orchestratorPage.handlePortPointerDown($event, node.id, 'input')"></button>
                 <header class="orchestrator-node-header">
                   <x-icon x-text="node.type === 'docker_container' ? 'deployed_code' : 'smart_toy'"></x-icon>
                   <span x-text="node.name"></span>
                   <span class="orchestrator-node-status" :data-status="node.status || 'idle'"></span>
+                  <button type="button" class="orchestrator-node-delete" title="Delete node" aria-label="Delete node"
+                    @click.stop="void $store.orchestratorPage.safeRemoveNode(node.id)">
+                    <x-icon>close</x-icon>
+                  </button>
                 </header>
                 <div class="orchestrator-node-body">
                   <p x-text="node.type"></p>
                   <p x-text="node.config?.image || node.config?.model || node.config?.endpoint || 'Not configured'"></p>
+                  <p class="orchestrator-node-meta" x-show="node.type === 'docker_container'"
+                    x-text="node.config?.containerId ? 'container: ' + String(node.config.containerId).slice(0, 12) : 'unbound'"></p>
+
+                  <template x-if="node.type === 'docker_container'">
+                    <div class="orchestrator-node-field">
+                      <label>X-API-KEY</label>
+                      <input type="password" autocomplete="off" spellcheck="false"
+                        :value="node.config?.apiKey || ''"
+                        @input.stop="node.config = { ...(node.config || {}), apiKey: $event.target.value }"
+                        @blur.stop="void $store.orchestratorPage.persistConfigChange(node.id)"
+                        @pointerdown.stop="" placeholder="paste from /settings → External API" />
+                    </div>
+                  </template>
+
+                  <template x-if="node.type !== 'docker_container'">
+                    <div class="orchestrator-node-field">
+                      <label>Prompt</label>
+                      <textarea rows="3"
+                        :value="$store.orchestratorPage.getNodeUi(node.id).input"
+                        @input.stop="$store.orchestratorPage.setNodeInput(node.id, $event.target.value)"
+                        @pointerdown.stop="" placeholder="Type your message…"></textarea>
+                    </div>
+                  </template>
+
+                  <div class="orchestrator-node-received"
+                    x-show="$store.orchestratorPage.getNodeUi(node.id).receivedFrom?.content">
+                    <div class="orchestrator-node-received-label" x-text="`received from ${$store.orchestratorPage.getNodeUi(node.id).receivedFrom?.from || ''}`"></div>
+                    <div class="orchestrator-node-output--markdown"
+                      x-html="$store.orchestratorPage.getNodeReceivedHtml(node.id)"></div>
+                  </div>
+
+                  <div class="orchestrator-node-output orchestrator-node-output--markdown"
+                    x-show="$store.orchestratorPage.getNodeUi(node.id).output"
+                    x-html="$store.orchestratorPage.getNodeOutputHtml(node.id)"></div>
                 </div>
                 <footer class="orchestrator-node-footer">
-                  <button type="button" class="secondary-button">Logs</button>
-                  <button type="button" class="secondary-button">Run</button>
+                  <template x-if="node.type === 'docker_container'">
+                    <div class="orchestrator-node-footer-row">
+                      <button type="button" class="orchestrator-icon-button" @click.stop="void $store.orchestratorPage.bindContainer(node.id)" title="Bind to existing container" aria-label="Bind">
+                        <x-icon>link</x-icon>
+                      </button>
+                      <button type="button" class="orchestrator-icon-button" @click.stop="void $store.orchestratorPage.createAndBindContainer(node.id)" title="Create from image and start" aria-label="Create">
+                        <x-icon>add_circle</x-icon>
+                      </button>
+                      <button type="button" class="orchestrator-icon-button" @click.stop="$store.orchestratorPage.openContainerSettings(node.id)" title="Open container settings page" aria-label="Settings">
+                        <x-icon>settings</x-icon>
+                      </button>
+                    </div>
+                  </template>
+                  <button type="button" class="orchestrator-icon-button" @click.stop="void $store.orchestratorPage.showNodeLogs(node.id)" title="Logs" aria-label="Logs">
+                    <x-icon>description</x-icon>
+                  </button>
+                  <button type="button" class="orchestrator-icon-button orchestrator-icon-button--primary" @click.stop="void $store.orchestratorPage.runNode(node.id)" title="Run" aria-label="Run">
+                    <x-icon>play_arrow</x-icon>
+                  </button>
                 </footer>
-                <button type="button" class="orchestrator-port orchestrator-port--output" title="Output port" aria-label="Output port"></button>
+                <button type="button" class="orchestrator-port orchestrator-port--output" title="Output port" aria-label="Output port"
+                  :data-pending="$store.orchestratorPage.isPortPending(node.id, 'output')"
+                  @pointerdown.stop="$store.orchestratorPage.handlePortPointerDown($event, node.id, 'output')"></button>
               </article>
             </template>
           </div>

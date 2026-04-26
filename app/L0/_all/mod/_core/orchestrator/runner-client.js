@@ -2,30 +2,35 @@ export function createRunnerClient(runtimeInput) {
   const runtime = ensureApiRuntime(runtimeInput);
 
   return {
-    start(request = {}) {
-      return runtime.api.call("agent_run_start", {
+    async start(request = {}) {
+      const response = await runtime.api.call("agent_run_start", {
         method: "POST",
         body: normalizeObject(request)
       });
+      return unwrapRun(response);
     },
-    status(runId) {
-      return runtime.api.call("agent_run_status", {
+    async status(runId) {
+      const response = await runtime.api.call("agent_run_status", {
         query: { runId: normalizeId(runId) }
       });
+      return unwrapRun(response);
     },
-    stop(runId) {
-      return runtime.api.call("agent_run_stop", {
+    async stop(runId) {
+      const response = await runtime.api.call("agent_run_stop", {
         method: "POST",
         body: { runId: normalizeId(runId) }
       });
+      return unwrapRun(response);
     },
-    events(runId, query = {}) {
-      return runtime.api.call("agent_run_events", {
+    async events(runId, query = {}) {
+      const response = await runtime.api.call("agent_run_events", {
         query: {
           ...normalizeObject(query),
           runId: normalizeId(runId)
         }
       });
+      if (response && Array.isArray(response.events)) return response.events;
+      return Array.isArray(response) ? response : [];
     }
   };
 }
@@ -45,4 +50,11 @@ function normalizeObject(value) {
 
 function normalizeId(value) {
   return String(value || "").trim();
+}
+
+function unwrapRun(response) {
+  if (response && typeof response === "object" && response.run && typeof response.run === "object") {
+    return response.run;
+  }
+  return response;
 }

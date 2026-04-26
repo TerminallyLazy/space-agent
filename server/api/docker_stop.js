@@ -11,5 +11,12 @@ export async function post(context) {
     error.statusCode = 400;
     throw error;
   }
-  return getService(context).stop(containerId);
+  try {
+    return await getService(context).stop(containerId);
+  } catch (error) {
+    if (Number(error?.statusCode) === 304) {
+      return { ok: true, containerId, alreadyStopped: true };
+    }
+    throw error;
+  }
 }
